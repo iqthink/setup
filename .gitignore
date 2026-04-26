@@ -1,0 +1,6 @@
+/dist/
+/iqdev
+/iqdev-*
+*.test
+*.out
+.DS_Store
