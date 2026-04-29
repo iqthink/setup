@@ -25,8 +25,7 @@ func (s ShellConfig) Check(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	text := string(data)
-	return strings.Contains(text, "mise activate") &&
-		strings.Contains(text, `$HOME/.local/bin`), nil
+	return strings.Contains(text, "mise activate") && hasLocalBinPath(text), nil
 }
 
 func (s ShellConfig) Run(ctx context.Context, out chan<- string) error {
@@ -45,7 +44,7 @@ func (s ShellConfig) Run(ctx context.Context, out chan<- string) error {
 	}
 	defer f.Close()
 
-	if !strings.Contains(text, `$HOME/.local/bin`) {
+	if !hasLocalBinPath(text) {
 		fmt.Fprintln(f)
 		fmt.Fprintln(f, "# iqdev: ensure ~/.local/bin is on PATH")
 		fmt.Fprintln(f, `export PATH="$HOME/.local/bin:$PATH"`)
@@ -58,6 +57,28 @@ func (s ShellConfig) Run(ctx context.Context, out chan<- string) error {
 		out <- fmt.Sprintf("Added mise activation for %s", shellName)
 	}
 	return nil
+}
+
+// hasLocalBinPath returns true if the rc file already prepends ~/.local/bin
+// to PATH in any of the common forms — `$HOME/.local/bin`, `${HOME}/...`,
+// `~/.local/bin`, or the expanded absolute home path. install.sh writes the
+// expanded form; this step writes `$HOME/.local/bin`. Without checking both,
+// we'd duplicate the export.
+func hasLocalBinPath(text string) bool {
+	candidates := []string{
+		`$HOME/.local/bin`,
+		`${HOME}/.local/bin`,
+		`~/.local/bin`,
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		candidates = append(candidates, home+"/.local/bin")
+	}
+	for _, c := range candidates {
+		if strings.Contains(text, c) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ShellConfig) rcFile() (string, string, error) {
