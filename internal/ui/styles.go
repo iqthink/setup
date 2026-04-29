@@ -24,9 +24,14 @@ var (
 	BoxDone = lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
 		BorderForeground(Green).
-		Foreground(Green).
-		Bold(true).
 		Padding(1, 4)
+
+	DoneHeader  = lipgloss.NewStyle().Bold(true).Foreground(Green)
+	StepHeader  = lipgloss.NewStyle().Bold(true).Foreground(White)
+	StepNumber  = lipgloss.NewStyle().Bold(true).Foreground(Purple)
+	StepLabel   = lipgloss.NewStyle().Foreground(White)
+	Command     = lipgloss.NewStyle().Bold(true).Foreground(Yellow)
+	Note        = lipgloss.NewStyle().Italic(true).Foreground(Gray)
 
 	BoxFail = lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).

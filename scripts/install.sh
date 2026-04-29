@@ -18,6 +18,21 @@ case "$ARCH" in
   *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
+if ! command -v brew >/dev/null 2>&1 \
+  && [ ! -x /opt/homebrew/bin/brew ] \
+  && [ ! -x /usr/local/bin/brew ]; then
+  cat >&2 <<'EOF'
+iqdev requires Homebrew, but it is not installed.
+
+Install it first (in this terminal, so it can ask for your password):
+
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+Then re-run this installer.
+EOF
+  exit 1
+fi
+
 echo "Looking up the latest iqdev release..."
 VERSION=$(curl -sI "https://github.com/$REPO/releases/latest" \
   | grep -i '^location:' \

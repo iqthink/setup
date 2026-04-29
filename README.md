@@ -3,9 +3,19 @@
 Global Mac bootstrap for running any iqthink Rails app.
 
 A single TUI (BubbleTea) that installs everything your Mac needs to clone a
-repo and have it running in minutes: Homebrew, Xcode CLT, mise, gum, gh,
-1Password CLI, hivemind, Stripe CLI, libpq, libyaml, openssl@3, gmp, rust,
-vips, ImageMagick, redis, and OrbStack.
+repo and have it running in minutes: Xcode CLT, mise, gum, gh, 1Password CLI,
+hivemind, Stripe CLI, libpq, libyaml, openssl@3, gmp, rust, vips, ImageMagick,
+redis, and OrbStack. (Homebrew is required first.)
+
+## Prerequisite: Homebrew
+
+iqdev does **not** install Homebrew, because the brew installer needs an
+interactive sudo prompt that doesn't work under `curl | bash`. Install it
+yourself first (in a real terminal, so it can ask for your password):
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
 
 ## Install
 
@@ -30,8 +40,8 @@ iqdev --help       Show help
 
 ```bash
 mise install       # installs Go
+go build -o /tmp/iqdev ./cmd/iqdev # builds local binary
 go run ./cmd/iqdev # runs the TUI without compiling
-go build ./...     # builds
 ```
 
 Releases are published via GitHub Actions whenever a `v*` tag is pushed.
