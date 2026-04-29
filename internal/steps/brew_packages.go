@@ -9,7 +9,11 @@ import (
 
 // Packages installed by `brew install`. Tap-qualified names are allowed
 // (e.g. "stripe/stripe-cli/stripe"); for the existence check we use the
-// final segment as the formula name.
+// final segment as the formula/cask name.
+//
+// 1password-cli per the official docs is installed plain (`brew install
+// 1password-cli`); brew auto-resolves it. The check tries both formula
+// and cask state so we don't loop on whichever side brew lands on.
 var Packages = []string{
 	"gum",
 	"mise",
@@ -33,11 +37,7 @@ func (BrewPackages) Name() string { return "Homebrew packages" }
 
 func (BrewPackages) Check(ctx context.Context) (bool, error) {
 	for _, p := range Packages {
-		name := p
-		if i := strings.LastIndex(p, "/"); i >= 0 {
-			name = p[i+1:]
-		}
-		if !brewenv.PackageInstalled(name) {
+		if !installed(p) {
 			return false, nil
 		}
 	}
@@ -45,6 +45,26 @@ func (BrewPackages) Check(ctx context.Context) (bool, error) {
 }
 
 func (BrewPackages) Run(ctx context.Context, out chan<- string) error {
-	args := append([]string{"install"}, Packages...)
+	out <- "Updating Homebrew..."
+	if err := runCmd(ctx, out, brewenv.BrewPath(), "update"); err != nil {
+		return err
+	}
+	args := []string{"install"}
+	for _, p := range Packages {
+		if !installed(p) {
+			args = append(args, p)
+		}
+	}
+	if len(args) == 1 {
+		return nil
+	}
 	return runCmd(ctx, out, brewenv.BrewPath(), args...)
+}
+
+func installed(pkg string) bool {
+	name := pkg
+	if i := strings.LastIndex(pkg, "/"); i >= 0 {
+		name = pkg[i+1:]
+	}
+	return brewenv.PackageInstalled(name) || brewenv.CaskInstalled(name)
 }

@@ -83,15 +83,29 @@ func (m Model) stepLine(i int, s steps.Step) string {
 }
 
 func (m Model) doneView() string {
+	step := func(num, label, cmd string, notes ...string) string {
+		head := ui.StepNumber.Render(num+".") + " " + ui.StepLabel.Render(label)
+		out := head + "\n       " + ui.Command.Render(cmd)
+		for _, n := range notes {
+			out += "\n     " + ui.Note.Render(n)
+		}
+		return out
+	}
+
 	body := strings.Join([]string{
-		ui.GlyphDone + "  Done",
+		ui.DoneHeader.Render(ui.GlyphDone + "  Done"),
 		"",
-		"Now go to your Rails app and run:",
+		ui.StepHeader.Render("Next steps:"),
 		"",
-		"  bin/setup",
+		"  " + step("1", "Sign in to 1Password CLI:", "op signin",
+			"(First time? In 1Password: Settings → Developer →",
+			" enable \"Integrate with 1Password CLI\".)"),
 		"",
-		"If this is your first time, close and reopen",
-		"your terminal so mise activates.",
+		"  " + step("2", "Authenticate the GitHub CLI:", "gh auth login"),
+		"",
+		"  " + step("3", "In your Rails app, run:", "bin/setup"),
+		"",
+		ui.Note.Render("First time? Close and reopen your terminal so mise activates."),
 	}, "\n")
 	return "\n" + ui.BoxDone.Render(body) + "\n\n" +
 		ui.Hint.Render("  Press Enter to exit.") + "\n"

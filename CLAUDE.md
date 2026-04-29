@@ -39,16 +39,17 @@ A release is cut by tagging `vX.Y.Z` and pushing the tag. The
 
 ## Architecture
 
-### Two-phase startup: Homebrew bootstrap is **outside** BubbleTea
+### Homebrew is a prerequisite, not a step
 
-`cmd/iqdev/main.go` installs Homebrew **before** `tea.NewProgram(...)` starts.
-The brew installer needs an interactive sudo prompt; running it from inside
-BubbleTea breaks rendering and breaks sudo. So `bootstrapHomebrew()` shells
-out with `cmd.Stdin/Stdout/Stderr = os.Stdin/...` (real TTY), then calls
-`brewenv.AddToPath()` to prepend `/opt/homebrew/bin` (or `/usr/local/bin` on
-Intel) so the rest of the process — including the TUI's brew calls — finds it.
-Only after that does the TUI start. **Do not move Homebrew installation into a
-Step.**
+`iqdev` does **not** install Homebrew. Earlier versions tried to bootstrap it
+before `tea.NewProgram(...)`, but that broke under `curl … | bash` (the brew
+installer reads from stdin for sudo, but stdin is the curl pipe — even with
+`/dev/tty` reattached at the iqdev level, the inner `bash -c "curl … | bash"`
+gets a pipe). So `cmd/iqdev/main.go` checks `brewenv.Installed()`; if missing,
+it prints the official Homebrew install command and exits non-zero. Both
+`scripts/install.sh` and the iqdev binary do this check. Once Homebrew is
+present, `brewenv.AddToPath()` prepends `/opt/homebrew/bin` (or
+`/usr/local/bin` on Intel) so the TUI's brew calls find it.
 
 ### Step pipeline
 
@@ -66,10 +67,16 @@ shared helper: it merges stdout+stderr through an `io.Pipe` and bufio-scans
 lines into the channel. Use it from any new step instead of rolling another
 exec wrapper.
 
-The brew packages step issues a **single** `brew install <all packages>` rather
-than iterating — faster and cleaner output. The Stripe CLI tap is qualified
-inline (`stripe/stripe-cli/stripe`); for `Check`, the helper takes the last
-path segment as the formula name.
+The brew packages step keeps a single `Packages` list in `brew_packages.go`.
+It runs `brew update` first (stale installs trip on cask DSL features), then
+issues one `brew install <missing packages>` — brew auto-resolves casks vs.
+formulae, so we don't pass `--cask` even for casks like `1password-cli` (this
+matches the 1Password docs, which show `brew install 1password-cli` plain).
+The existence check accepts either formula OR cask presence (`brew list
+--versions` and `brew list --cask --versions`) so we don't loop on whichever
+side brew lands on. The Stripe CLI tap is qualified inline
+(`stripe/stripe-cli/stripe`); for the existence check the helper takes the
+last path segment as the package name.
 
 ### TUI is a thin shell over the pipeline
 
