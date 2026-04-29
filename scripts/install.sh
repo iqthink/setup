@@ -86,8 +86,15 @@ if ! echo ":$PATH:" | grep -q ":$INSTALL_DIR:"; then
     bash) RC="$HOME/.bashrc" ;;
     *)    RC="$HOME/.zshrc"  ;;
   esac
-  if ! grep -qF "$INSTALL_DIR" "$RC" 2>/dev/null; then
-    printf '\n# iqdev: ensure ~/.local/bin is on PATH\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$RC"
+  # Skip if any common form of the same export is already present, so we
+  # don't duplicate against the iqdev TUI shell-config step.
+  if ! grep -qE '(\$HOME|\$\{HOME\}|~|'"$HOME"')/\.local/bin' "$RC" 2>/dev/null; then
+    if [ "$INSTALL_DIR" = "$HOME/.local/bin" ]; then
+      EXPORT_PATH='$HOME/.local/bin'
+    else
+      EXPORT_PATH="$INSTALL_DIR"
+    fi
+    printf '\n# iqdev: ensure ~/.local/bin is on PATH\nexport PATH="%s:$PATH"\n' "$EXPORT_PATH" >> "$RC"
     echo "Added $INSTALL_DIR to your PATH in $RC."
   fi
   export PATH="$INSTALL_DIR:$PATH"
