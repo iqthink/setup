@@ -2,47 +2,51 @@ package ui
 
 import "github.com/charmbracelet/lipgloss"
 
+// Adaptive palette: each color has a light-bg variant (darker shade for
+// contrast) and a dark-bg variant (brighter shade). lipgloss picks based
+// on the terminal's detected background, so the same styles render
+// legibly on both themes.
 var (
-	Red    = lipgloss.Color("196")
-	Green  = lipgloss.Color("46")
-	Yellow = lipgloss.Color("214")
-	Purple = lipgloss.Color("135")
-	Gray   = lipgloss.Color("240")
-	White  = lipgloss.Color("255")
+	primary = lipgloss.AdaptiveColor{Light: "232", Dark: "255"}
+	dim     = lipgloss.AdaptiveColor{Light: "242", Dark: "240"}
+	green   = lipgloss.AdaptiveColor{Light: "28", Dark: "46"}
+	yellow  = lipgloss.AdaptiveColor{Light: "130", Dark: "214"}
+	purple  = lipgloss.AdaptiveColor{Light: "91", Dark: "135"}
+	red     = lipgloss.AdaptiveColor{Light: "124", Dark: "196"}
 
-	Title = lipgloss.NewStyle().Bold(true).Foreground(Red)
-	Hint  = lipgloss.NewStyle().Foreground(Gray)
+	Title = lipgloss.NewStyle().Bold(true).Foreground(red)
+	Hint  = lipgloss.NewStyle().Foreground(dim)
 
-	StepRunning = lipgloss.NewStyle().Foreground(Yellow)
-	StepDone    = lipgloss.NewStyle().Foreground(Green)
-	StepSkipped = lipgloss.NewStyle().Foreground(Gray)
-	StepFailed  = lipgloss.NewStyle().Foreground(Red)
-	StepPending = lipgloss.NewStyle().Foreground(Gray)
+	StepRunning = lipgloss.NewStyle().Foreground(yellow)
+	StepDone    = lipgloss.NewStyle().Foreground(green)
+	StepSkipped = lipgloss.NewStyle().Foreground(dim)
+	StepFailed  = lipgloss.NewStyle().Foreground(red)
+	StepPending = lipgloss.NewStyle().Foreground(dim)
 
-	LogLine = lipgloss.NewStyle().Foreground(Gray)
+	LogLine = lipgloss.NewStyle().Foreground(dim)
 
 	BoxDone = lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
-		BorderForeground(Green).
+		BorderForeground(green).
 		Padding(1, 4)
 
-	DoneHeader  = lipgloss.NewStyle().Bold(true).Foreground(Green)
-	StepHeader  = lipgloss.NewStyle().Bold(true).Foreground(White)
-	StepNumber  = lipgloss.NewStyle().Bold(true).Foreground(Purple)
-	StepLabel   = lipgloss.NewStyle().Foreground(White)
-	Command     = lipgloss.NewStyle().Bold(true).Foreground(Yellow)
-	Note        = lipgloss.NewStyle().Italic(true).Foreground(Gray)
+	DoneHeader = lipgloss.NewStyle().Bold(true).Foreground(green)
+	StepHeader = lipgloss.NewStyle().Bold(true).Foreground(primary)
+	StepNumber = lipgloss.NewStyle().Bold(true).Foreground(purple)
+	StepLabel  = lipgloss.NewStyle().Foreground(primary)
+	Command    = lipgloss.NewStyle().Bold(true).Foreground(yellow)
+	Note       = lipgloss.NewStyle().Italic(true).Foreground(dim)
 
 	BoxFail = lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
-		BorderForeground(Red).
-		Foreground(Red).
+		BorderForeground(red).
+		Foreground(red).
 		Bold(true).
 		Padding(1, 4)
 
 	LogBox = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Gray).
+		BorderForeground(dim).
 		Padding(0, 1)
 )
 
