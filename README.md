@@ -40,8 +40,8 @@ iqdev --help       Show help
 
 ```bash
 mise install       # installs Go
+go build -o /tmp/iqdev ./cmd/iqdev # builds local binary
 go run ./cmd/iqdev # runs the TUI without compiling
-go build ./...     # builds
 ```
 
 Releases are published via GitHub Actions whenever a `v*` tag is pushed.
