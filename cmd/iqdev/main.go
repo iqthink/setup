@@ -35,6 +35,9 @@ WHAT IT INSTALLS:
   · Xcode Command Line Tools (opens the native dialog)
   · Homebrew packages: gum, mise, gh, 1password-cli, hivemind, stripe-cli,
     libpq, libyaml, openssl@3, gmp, rust, vips, imagemagick, redis
+  · Mise config (precompiled Ruby binaries instead of compiling from source)
+  · Node.js LTS (latest, pinned globally via mise)
+  · Yarn (via Corepack) and pnpm (global npm install)
   · OrbStack (Docker for macOS)
   · Shell config (~/.zshrc or ~/.bashrc): PATH and mise activate
 
