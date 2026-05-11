@@ -18,6 +18,9 @@ func All() []Step {
 	return []Step{
 		XcodeCLT{},
 		BrewPackages{},
+		MiseConfig{},
+		NodeLTS{},
+		NodePMs{},
 		OrbStack{},
 		ShellConfig{},
 	}
