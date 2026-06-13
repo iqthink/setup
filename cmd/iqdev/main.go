@@ -16,11 +16,14 @@ import (
 // version is injected at build time via -ldflags "-X main.version=...".
 var version = "dev"
 
-const helpText = `iqdev — Global Mac bootstrap for iqthink Rails apps
+const helpText = `iqdev — Global Mac bootstrap for iqthink
 
 USAGE:
   iqdev              Install whatever is missing. Idempotent: if everything
-                     is already in place, it finishes in seconds.
+                     is already in place, it finishes in seconds. On a fresh
+                     Mac, prompts once for which optional team apps to add.
+  iqdev pick         Re-open the optional team-apps picker without running
+                     the rest of the pipeline.
   iqdev update       Download the latest release and replace the binary.
   iqdev --version    Print the version.
   iqdev --help       Show this help.
@@ -32,6 +35,7 @@ PREREQUISITE:
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 WHAT IT INSTALLS:
+  Rails dev stack:
   · Xcode Command Line Tools (opens the native dialog)
   · Homebrew packages: gum, mise, gh, 1password-cli, hivemind, stripe-cli,
     libpq, libyaml, openssl@3, gmp, rust, vips, imagemagick, redis
@@ -40,6 +44,14 @@ WHAT IT INSTALLS:
   · Yarn (via Corepack) and pnpm (global npm install)
   · OrbStack (Docker for macOS)
   · Shell config (~/.zshrc or ~/.bashrc): PATH and mise activate
+
+  iqthink team apps (always installed):
+  · 1Password GUI · Basecamp + CLI · Zoom · Claude · Conductor
+  · Ghostty · TablePro · Bruno · CleanShot · Dia browser
+
+  Optional team apps (picked on first run, saved to ~/.iqdev-team-profile):
+  · Raycast · ChatGPT · Figma · Tailscale · gcloud CLI · Zed · GitHub Desktop
+  · Screen Studio · Microsoft Office · Dropbox · HEY · WhatsApp
 
 AFTER iqdev:
   Go to your Rails app and run 'bin/setup'. Then 'bin/dev'.
@@ -67,6 +79,12 @@ func main() {
 			return
 		case "update":
 			if err := update.Run(version); err != nil {
+				fmt.Fprintln(os.Stderr, "✗", err)
+				os.Exit(1)
+			}
+			return
+		case "pick":
+			if err := runPicker(); err != nil {
 				fmt.Fprintln(os.Stderr, "✗", err)
 				os.Exit(1)
 			}

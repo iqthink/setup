@@ -12,6 +12,8 @@ func (m Model) View() string {
 	switch m.state {
 	case stateWelcome:
 		return m.welcomeView()
+	case stateConfig:
+		return m.pick.View()
 	case stateRunning:
 		return m.runningView()
 	case stateDone:

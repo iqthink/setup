@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/iqthink/setup/internal/picker"
+	"github.com/iqthink/setup/internal/profile"
 	"github.com/iqthink/setup/internal/steps"
 	"github.com/iqthink/setup/internal/ui"
 )
@@ -15,6 +17,7 @@ type state int
 
 const (
 	stateWelcome state = iota
+	stateConfig // picker for optional team apps
 	stateRunning
 	stateDone
 	stateFailed
@@ -44,6 +47,8 @@ type Model struct {
 	spin spinner.Model
 	vp   viewport.Model
 
+	pick picker.Model
+
 	width  int
 	height int
 
@@ -59,12 +64,25 @@ func New() Model {
 	vp := viewport.New(0, 0)
 
 	all := steps.All()
+
+	// Pre-load the picker with the team-apps optional menu so the user can
+	// dive straight in without us building it on a state transition. If a
+	// profile already exists, the welcome→picker step is skipped, but the
+	// picker is still wired so `iqdev pick` (which uses the same model) is
+	// only one screen away.
+	opts := make([]picker.Option, 0, len(steps.TeamAppsOptionalCandidates))
+	for _, c := range steps.TeamAppsOptionalCandidates {
+		opts = append(opts, picker.Option{Key: c.Pkg, Label: c.Label, Hint: c.Hint})
+	}
+	initial, _ := profile.Load()
+
 	return Model{
 		steps:    all,
 		statuses: make([]stepStatus, len(all)),
 		state:    stateWelcome,
 		spin:     sp,
 		vp:       vp,
+		pick:     picker.New("Optional iqthink team apps", opts, initial),
 	}
 }
 

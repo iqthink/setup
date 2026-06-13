@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/iqthink/setup/internal/picker"
+	"github.com/iqthink/setup/internal/profile"
 	"github.com/iqthink/setup/internal/steps"
 )
 
@@ -28,6 +30,19 @@ type pipeMsg struct {
 }
 
 type pipeFinishedMsg struct{}
+
+// startPipeline transitions from welcome (or picker) into the running
+// state and kicks off the install goroutine. Extracted so both the
+// "profile exists → skip picker" path and the "picker confirmed" path
+// share one entry point.
+func (m Model) startPipeline() (tea.Model, tea.Cmd) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+	m.ch = make(chan pipeMsg, 64)
+	m.state = stateRunning
+	go runPipeline(ctx, m.steps, m.ch)
+	return m, tea.Batch(m.spin.Tick, m.waitForPipe())
+}
 
 func runPipeline(ctx context.Context, all []steps.Step, ch chan<- pipeMsg) {
 	defer close(ch)
@@ -89,6 +104,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// In the picker state, hand every key to the picker submodel.
+		// Quit/cancel inside the picker is handled by reading Cancelled
+		// after Update — we never let ctrl+c bypass the picker mid-state
+		// because the picker itself respects it.
+		if m.state == stateConfig {
+			updated, cmd := m.pick.Update(msg)
+			m.pick = updated.(picker.Model)
+			if m.pick.Confirmed() {
+				if err := profile.Save(m.pick.Selected()); err != nil {
+					// Profile-save failure shouldn't sink the run; the picks
+					// stay in-memory for this pipeline via the loaded profile
+					// reload in TeamAppsOptional, which will re-read disk and
+					// install nothing if the save failed silently. We surface
+					// the install gap by writing to the running log later.
+					m.logLines = append(m.logLines, "warning: could not save ~/.iqdev-team-profile: "+err.Error())
+				}
+				return m.startPipeline()
+			}
+			if m.pick.Cancelled() {
+				// User opted out of the picker: keep whatever was on disk
+				// (or nothing) and run the pipeline.
+				return m.startPipeline()
+			}
+			return m, cmd
+		}
 		switch msg.String() {
 		case "ctrl+c", "q":
 			if m.cancel != nil {
@@ -98,12 +138,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter", " ":
 			switch m.state {
 			case stateWelcome:
-				ctx, cancel := context.WithCancel(context.Background())
-				m.cancel = cancel
-				m.ch = make(chan pipeMsg, 64)
-				m.state = stateRunning
-				go runPipeline(ctx, m.steps, m.ch)
-				return m, tea.Batch(m.spin.Tick, m.waitForPipe())
+				// First-run UX: show the picker so the user can select
+				// optional team apps before the pipeline starts. On
+				// subsequent runs (profile exists) skip straight to running
+				// — no nagging.
+				if !profile.Exists() {
+					m.state = stateConfig
+					return m, nil
+				}
+				return m.startPipeline()
 			case stateDone, stateFailed:
 				return m, tea.Quit
 			}
