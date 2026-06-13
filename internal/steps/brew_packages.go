@@ -49,6 +49,15 @@ func (BrewPackages) Run(ctx context.Context, out chan<- string) error {
 	if err := runCmd(ctx, out, brewenv.BrewPath(), "update"); err != nil {
 		return err
 	}
+	// Newer Homebrew refuses to install from a 3rd-party tap until that tap
+	// has been explicitly trusted, so we trust each tap referenced by a
+	// tap-qualified package in Packages (e.g. "stripe/stripe-cli/stripe").
+	// `brew trust` on an already-trusted tap is a no-op.
+	for _, tap := range tapsInPackages() {
+		if err := runCmd(ctx, out, brewenv.BrewPath(), "trust", tap); err != nil {
+			return err
+		}
+	}
 	args := []string{"install"}
 	for _, p := range Packages {
 		if !installed(p) {
@@ -59,6 +68,26 @@ func (BrewPackages) Run(ctx context.Context, out chan<- string) error {
 		return nil
 	}
 	return runCmd(ctx, out, brewenv.BrewPath(), args...)
+}
+
+// tapsInPackages returns the distinct "<user>/<tap>" prefixes of every
+// tap-qualified entry in Packages, preserving declaration order.
+func tapsInPackages() []string {
+	seen := map[string]bool{}
+	var taps []string
+	for _, p := range Packages {
+		parts := strings.Split(p, "/")
+		if len(parts) < 3 {
+			continue
+		}
+		tap := parts[0] + "/" + parts[1]
+		if seen[tap] {
+			continue
+		}
+		seen[tap] = true
+		taps = append(taps, tap)
+	}
+	return taps
 }
 
 func installed(pkg string) bool {
