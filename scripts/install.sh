@@ -22,13 +22,21 @@ if ! command -v brew >/dev/null 2>&1 \
   && [ ! -x /opt/homebrew/bin/brew ] \
   && [ ! -x /usr/local/bin/brew ]; then
   cat >&2 <<'EOF'
-iqdev requires Homebrew, but it is not installed.
+iqdev requires Homebrew, but it is not installed. Two steps:
 
-Install it first (in this terminal, so it can ask for your password):
+Step 1 — install Homebrew (copy-paste this in this terminal):
 
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-Then re-run this installer.
+  It will ask for your Mac login password (typing is invisible — that's
+  normal), then ask you to press RETURN. It also installs Apple's Command
+  Line Tools, so it can take several minutes.
+
+Step 2 — when it says "Installation successful!", re-run this installer:
+
+  curl -fsSL https://raw.githubusercontent.com/iqthink/setup/main/scripts/install.sh | bash
+
+(You can ignore Homebrew's own "Next steps" about PATH — iqdev handles it.)
 EOF
   exit 1
 fi

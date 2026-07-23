@@ -30,6 +30,7 @@ func (OrbStack) Run(ctx context.Context, out chan<- string) error {
 	_ = exec.CommandContext(ctx, "open", "/Applications/OrbStack.app").Run()
 	out <- ""
 	out <- "  >> ACTION REQUIRED in the OrbStack window <<"
+	out <- "  (It may open behind this one — click the OrbStack icon in the Dock.)"
 	out <- ""
 	out <- "  1. If macOS asks to install Rosetta, click \"Install\""
 	out <- "     (required on Apple Silicon to run x86 containers)."

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -17,7 +18,7 @@ type state int
 
 const (
 	stateWelcome state = iota
-	stateConfig // picker for optional team apps
+	stateConfig        // picker for optional team apps
 	stateRunning
 	stateDone
 	stateFailed
@@ -39,8 +40,12 @@ type Model struct {
 	state    state
 
 	current   int
-	failedIdx int
-	failErr   error
+	stepStart time.Time // when the current running step started, for elapsed display
+
+	// failures accumulates every step that failed. The pipeline no longer
+	// aborts on the first failure: it records each one, keeps going, and the
+	// run ends on a summary screen listing them all.
+	failures []stepFailure
 
 	logLines []string
 
@@ -90,16 +95,33 @@ func (m Model) Init() tea.Cmd {
 	return m.spin.Tick
 }
 
-// Failed reports whether the pipeline ended in a failed state.
-func (m Model) Failed() bool { return m.state == stateFailed }
-
-// FailedStep returns the name of the step that failed, or empty.
-func (m Model) FailedStep() string {
-	if m.state != stateFailed || m.failedIdx >= len(m.steps) {
-		return ""
-	}
-	return m.steps[m.failedIdx].Name()
+// stepFailure records a step that failed, with the tail of its output so the
+// summary can show what actually went wrong.
+type stepFailure struct {
+	idx  int
+	err  error
+	tail []string
 }
 
-// FailErr returns the error from the failed step, if any.
-func (m Model) FailErr() error { return m.failErr }
+// Failure is the exported view of a failed step, for the post-exit summary.
+type Failure struct {
+	Step string
+	Err  error
+	Tail []string
+}
+
+// Failed reports whether the pipeline ended with at least one failed step.
+func (m Model) Failed() bool { return len(m.failures) > 0 }
+
+// Failures returns every step that failed, in pipeline order.
+func (m Model) Failures() []Failure {
+	out := make([]Failure, 0, len(m.failures))
+	for _, f := range m.failures {
+		name := ""
+		if f.idx < len(m.steps) {
+			name = m.steps[f.idx].Name()
+		}
+		out = append(out, Failure{Step: name, Err: f.err, Tail: f.tail})
+	}
+	return out
+}

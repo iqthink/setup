@@ -58,16 +58,7 @@ func (BrewPackages) Run(ctx context.Context, out chan<- string) error {
 			return err
 		}
 	}
-	args := []string{"install"}
-	for _, p := range Packages {
-		if !installed(p) {
-			args = append(args, p)
-		}
-	}
-	if len(args) == 1 {
-		return nil
-	}
-	return runCmd(ctx, out, brewenv.BrewPath(), args...)
+	return brewInstallEach(ctx, out, Packages)
 }
 
 func installed(pkg string) bool {

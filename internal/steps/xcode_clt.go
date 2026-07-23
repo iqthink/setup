@@ -17,8 +17,14 @@ func (XcodeCLT) Check(ctx context.Context) (bool, error) {
 }
 
 func (XcodeCLT) Run(ctx context.Context, out chan<- string) error {
-	out <- "Opening the Xcode CLT install dialog."
-	out <- "Accept the system dialog. The download can take 5-10 minutes."
+	out <- "Opening the macOS \"Install Command Line Developer Tools\" dialog."
+	out <- ""
+	out <- "  >> ACTION REQUIRED in a macOS dialog <<"
+	out <- ""
+	out <- "  Click \"Install\", then \"Agree\". The dialog may open BEHIND this"
+	out <- "  window — check the Dock or press Cmd+Tab if you don't see it."
+	out <- ""
+	out <- "The download takes 5-10 minutes; we continue automatically when it's done."
 
 	// xcode-select --install opens the GUI installer and exits. It returns
 	// non-zero if the tools are already installed; we ignore that.
@@ -38,7 +44,7 @@ func (XcodeCLT) Run(ctx context.Context, out chan<- string) error {
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("Xcode CLT installation did not finish within 20 minutes")
+			return fmt.Errorf("Xcode CLT installation did not finish within 20 minutes — if the dialog was closed, re-run iqdev to reopen it")
 		}
 	}
 }

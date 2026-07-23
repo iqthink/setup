@@ -43,8 +43,20 @@ curl -fsSL https://raw.githubusercontent.com/iqthink/setup/main/scripts/install.
 
 This downloads the binary to `~/.local/bin/iqdev`, adds it to your PATH if
 missing, and runs it. On a fresh Mac, the TUI will pause for you to pick
-optional team apps before any install starts. When the pipeline finishes,
-go to your Rails app and run `bin/setup`.
+optional team apps before any install starts.
+
+When the pipeline finishes, iqdev prints your next steps:
+
+1. **Enable the 1Password CLI** (one-time, easy to miss): open the
+   1Password app, sign in, then Settings → Developer → turn on
+   *"Integrate with 1Password CLI"*. Verify with `op signin`.
+2. Authenticate the GitHub CLI: `gh auth login`.
+3. In a **new** terminal (so mise activates), go to your Rails app and run
+   `bin/setup`. No repo yet? `gh repo clone iqthink/<app>` first.
+
+Some apps ask for macOS permissions the first time you open them (CleanShot
+→ screen recording, Zoom → mic/camera, Tailscale → VPN); approve them in
+System Settings → Privacy & Security when prompted.
 
 ## Commands
 

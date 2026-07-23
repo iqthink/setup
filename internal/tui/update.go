@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,6 +28,7 @@ type pipeMsg struct {
 	idx  int
 	line string
 	err  error
+	tail []string
 }
 
 type pipeFinishedMsg struct{}
@@ -49,8 +51,10 @@ func runPipeline(ctx context.Context, all []steps.Step, ch chan<- pipeMsg) {
 	for i, st := range all {
 		done, err := st.Check(ctx)
 		if err != nil {
+			// A Check error is unusual; record it and move on rather than
+			// aborting the whole run for it.
 			ch <- pipeMsg{kind: kindFailed, idx: i, err: err}
-			return
+			continue
 		}
 		if done {
 			ch <- pipeMsg{kind: kindSkipped, idx: i}
@@ -64,12 +68,25 @@ func runPipeline(ctx context.Context, all []steps.Step, ch chan<- pipeMsg) {
 			runErr <- st.Run(ctx, out)
 			close(out)
 		}()
+		// Keep the last lines of output so a failure summary can show what
+		// actually went wrong, not just the exit status.
+		var tail []string
 		for line := range out {
 			ch <- pipeMsg{kind: kindLine, idx: i, line: line}
+			tail = append(tail, line)
+			if len(tail) > 20 {
+				tail = tail[len(tail)-20:]
+			}
 		}
 		if e := <-runErr; e != nil {
-			ch <- pipeMsg{kind: kindFailed, idx: i, err: e}
-			return
+			// User-initiated cancellation stops everything; anything else is
+			// recorded and the pipeline continues to the next step.
+			if ctx.Err() != nil {
+				ch <- pipeMsg{kind: kindFailed, idx: i, err: e}
+				return
+			}
+			ch <- pipeMsg{kind: kindFailed, idx: i, err: e, tail: append([]string(nil), tail...)}
+			continue
 		}
 		ch <- pipeMsg{kind: kindDone, idx: i}
 	}
@@ -162,6 +179,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case kindStarted:
 			m.statuses[msg.idx] = statusRunning
 			m.current = msg.idx
+			m.stepStart = time.Now()
 			m.logLines = nil
 			m.vp.SetContent("")
 		case kindSkipped:
@@ -177,15 +195,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statuses[msg.idx] = statusDone
 		case kindFailed:
 			m.statuses[msg.idx] = statusFailed
-			m.failedIdx = msg.idx
-			m.failErr = msg.err
-			m.state = stateFailed
-			return m, nil
+			m.failures = append(m.failures, stepFailure{
+				idx:  msg.idx,
+				err:  msg.err,
+				tail: msg.tail,
+			})
+			// Keep going — the summary at the end lists every failure.
 		}
 		return m, m.waitForPipe()
 
 	case pipeFinishedMsg:
-		if m.state != stateFailed {
+		if len(m.failures) > 0 {
+			m.state = stateFailed
+		} else {
 			m.state = stateDone
 		}
 		return m, nil

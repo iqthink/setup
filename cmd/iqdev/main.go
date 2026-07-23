@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -8,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/iqthink/setup/internal/brewenv"
+	"github.com/iqthink/setup/internal/steps"
 	"github.com/iqthink/setup/internal/tui"
 	"github.com/iqthink/setup/internal/ui"
 	"github.com/iqthink/setup/internal/update"
@@ -54,18 +56,28 @@ WHAT IT INSTALLS:
   · Screen Studio · Microsoft Office · Dropbox · HEY · WhatsApp
 
 AFTER iqdev:
-  Go to your Rails app and run 'bin/setup'. Then 'bin/dev'.
+  1. Enable the 1Password CLI (one-time, in the GUI): open the 1Password
+     app, sign in, then Settings → Developer → turn ON "Integrate with
+     1Password CLI". Verify with 'op signin'.
+  2. Authenticate the GitHub CLI: 'gh auth login'.
+  3. In a NEW terminal (so mise activates), go to your Rails app and run
+     'bin/setup'. Then 'bin/dev'.
 
 REPO: https://github.com/iqthink/setup
 `
 
 const homebrewMissingMsg = `iqdev requires Homebrew, but it is not installed.
 
-Install it first (in this terminal, so it can ask for your password):
+Install it first (copy-paste this in this terminal):
 
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-Then re-run iqdev.
+It will ask for your Mac login password (typing is invisible — that's
+normal), then ask you to press RETURN. It also installs Apple's Command
+Line Tools, so it can take several minutes.
+
+When it says "Installation successful!", run iqdev again. You can ignore
+Homebrew's own "Next steps" about PATH — iqdev handles that.
 `
 
 func main() {
@@ -111,6 +123,16 @@ func runTUI() {
 	}
 	brewenv.AddToPath()
 
+	// Prompt once for sudo up front (while stdin is still a real terminal) if
+	// there is pending work, so installers that need root (Zoom, OrbStack) get
+	// the password via $SUDO_ASKPASS instead of an unanswerable prompt inside
+	// the alt-screen TUI. Non-fatal: if it can't be obtained we continue and
+	// let the summary report whatever needed it. Skipped when nothing pends.
+	ctx := context.Background()
+	if steps.AnyPending(ctx) {
+		defer primeSudo(ctx)()
+	}
+
 	p := tea.NewProgram(tui.New(), tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
@@ -123,38 +145,39 @@ func runTUI() {
 		return
 	}
 	if m.Failed() {
-		fmt.Fprintf(os.Stderr, "\n✗ Failed: %s\n", m.FailedStep())
-		if m.FailErr() != nil {
-			fmt.Fprintf(os.Stderr, "  %s\n", m.FailErr())
+		failures := m.Failures()
+		fmt.Fprintf(os.Stderr, "\n✗ Finished with %d issue(s) — everything else installed:\n\n", len(failures))
+		for _, f := range failures {
+			fmt.Fprintf(os.Stderr, "  ✗ %s\n", f.Step)
+			if f.Err != nil {
+				fmt.Fprintf(os.Stderr, "      %s\n", f.Err)
+			}
+			for _, t := range lastLines(f.Tail, 6) {
+				fmt.Fprintf(os.Stderr, "      %s\n", t)
+			}
 		}
-		fmt.Fprintln(os.Stderr, "Re-run `iqdev` to retry.")
+		fmt.Fprintln(os.Stderr, "\nRe-run `iqdev` to retry (it's idempotent).")
 		os.Exit(1)
 	}
 
 	printNextSteps()
 }
 
-func printNextSteps() {
-	step := func(num, label, cmd string, notes ...string) {
-		fmt.Println("  " + ui.StepNumber.Render(num+".") + " " + ui.StepLabel.Render(label))
-		fmt.Println("       " + ui.Command.Render(cmd))
-		for _, n := range notes {
-			fmt.Println("     " + ui.Note.Render(n))
-		}
+func lastLines(s []string, n int) []string {
+	if len(s) > n {
+		return s[len(s)-n:]
 	}
+	return s
+}
 
+// printNextSteps re-prints the done screen's checklist after the alt-screen
+// TUI closes, so it survives in the terminal scrollback. The content is
+// tui.NextStepsBody() — the same single source the done screen renders — so
+// the two can never drift.
+func printNextSteps() {
 	fmt.Println()
 	fmt.Println(ui.DoneHeader.Render("✓ Done."))
 	fmt.Println()
-	fmt.Println(ui.StepHeader.Render("Next steps:"))
+	fmt.Println(tui.NextStepsBody())
 	fmt.Println()
-	step("1", "Sign in to 1Password CLI:", "op signin",
-		"(First time? Open 1Password → Settings → Developer →",
-		" enable \"Integrate with 1Password CLI\".)")
-	fmt.Println()
-	step("2", "Authenticate the GitHub CLI:", "gh auth login")
-	fmt.Println()
-	step("3", "In your Rails app, run:", "bin/setup")
-	fmt.Println()
-	fmt.Println(ui.Note.Render("  First time? Close and reopen your terminal so mise activates."))
 }
