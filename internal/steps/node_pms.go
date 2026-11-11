@@ -6,7 +6,8 @@ import (
 )
 
 // NodePMs enables yarn via Corepack and installs pnpm into the mise-managed
-// Node LTS. All commands run through `mise exec --` so they hit the same
+// Node LTS. Node stopped bundling Corepack in version 25, so it is installed
+// from npm first when the current Node does not have it. All commands run through `mise exec --` so they hit the same
 // node/npm/corepack that NodeLTS just installed — at this point in the
 // pipeline the user's shell hasn't been reloaded yet, so mise shims aren't
 // on PATH for the iqdev process.
@@ -28,6 +29,12 @@ func (NodePMs) Check(ctx context.Context) (bool, error) {
 }
 
 func (NodePMs) Run(ctx context.Context, out chan<- string) error {
+	if exec.CommandContext(ctx, "mise", "exec", "--", "which", "corepack").Run() != nil {
+		out <- "Installing Corepack via npm (Node 25+ no longer bundles it)"
+		if err := runCmd(ctx, out, "mise", "exec", "--", "npm", "install", "-g", "corepack"); err != nil {
+			return err
+		}
+	}
 	out <- "Enabling yarn via Corepack"
 	if err := runCmd(ctx, out, "mise", "exec", "--", "corepack", "enable", "yarn"); err != nil {
 		return err
