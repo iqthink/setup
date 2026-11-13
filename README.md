@@ -1,11 +1,29 @@
 # iqdev setup
 
-Global Mac bootstrap for running any iqthink Rails app.
+Global Mac bootstrap for iqthink.
 
-A single TUI (BubbleTea) that installs everything your Mac needs to clone a
-repo and have it running in minutes: Xcode CLT, mise, gum, gh, 1Password CLI,
-hivemind, Stripe CLI, libpq, libyaml, openssl@3, gmp, rust, vips, ImageMagick,
-redis, and OrbStack. (Homebrew is required first.)
+A single TUI (BubbleTea) that gets a fresh Mac ready for iqthink work in
+minutes — Rails dev stack plus the team-baseline apps every iqthink dev uses.
+(Homebrew is required first.)
+
+## What it installs
+
+**Rails dev stack** (always)
+Xcode CLT · mise · gum · gh · 1Password CLI · hivemind · Stripe CLI · libpq ·
+libyaml · openssl@3 · gmp · rust · vips · ImageMagick · redis · OrbStack ·
+Node LTS (via mise) · Yarn (Corepack) · pnpm · shell PATH + mise activate.
+
+**iqthink team apps** (always)
+1Password GUI · Basecamp (app + CLI) · Zoom · Claude · Conductor · Ghostty ·
+TablePro · Bruno · CleanShot · Dia browser.
+
+**Optional team apps** (you pick on first run, saved to `~/.iqdev-team-profile`)
+Raycast · ChatGPT · Figma · Tailscale · gcloud CLI · Zed · GitHub Desktop ·
+Screen Studio · Microsoft Office · Dropbox · HEY · WhatsApp.
+
+The optional picker only appears on the first run on each Mac. After that,
+iqdev reads the profile silently — run `iqdev pick` whenever you want to add
+or remove options.
 
 ## Prerequisite: Homebrew
 
@@ -24,24 +42,31 @@ curl -fsSL https://raw.githubusercontent.com/iqthink/setup/main/scripts/install.
 ```
 
 This downloads the binary to `~/.local/bin/iqdev`, adds it to your PATH if
-missing, and runs it. When it finishes, go to your Rails app and run
-`bin/setup`.
+missing, and runs it. On a fresh Mac, the TUI will pause for you to pick
+optional team apps before any install starts. When the pipeline finishes,
+go to your Rails app and run `bin/setup`.
 
 ## Commands
 
 ```
-iqdev              Install whatever is missing (idempotent)
-iqdev update       Update the binary to the latest release
-iqdev --version    Print the version
-iqdev --help       Show help
+iqdev              Install whatever is missing (idempotent). On a fresh
+                   Mac, opens the optional-apps picker once.
+iqdev pick         Re-open the optional team-apps picker. Saves to
+                   ~/.iqdev-team-profile. Does not run the install
+                   pipeline — re-run `iqdev` afterward to apply.
+iqdev update       Update the binary to the latest release.
+iqdev --version    Print the version.
+iqdev --help       Show help.
 ```
 
 ## Development
 
 ```bash
-mise install       # installs Go
-go build -o /tmp/iqdev ./cmd/iqdev # builds local binary
-go run ./cmd/iqdev # runs the TUI without compiling
+mise install                                              # installs Go
+mise exec -- go run ./cmd/iqdev                           # run the TUI live
+mise exec -- go build -o /tmp/iqdev ./cmd/iqdev           # build a binary
+mise exec -- go test ./...                                # all tests
+mise exec -- go vet ./...
 ```
 
 Releases are published via GitHub Actions whenever a `v*` tag is pushed.

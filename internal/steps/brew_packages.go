@@ -49,6 +49,15 @@ func (BrewPackages) Run(ctx context.Context, out chan<- string) error {
 	if err := runCmd(ctx, out, brewenv.BrewPath(), "update"); err != nil {
 		return err
 	}
+	// Newer Homebrew refuses to install from a 3rd-party tap until that tap
+	// has been explicitly trusted, so we trust each tap referenced by a
+	// tap-qualified package in Packages (e.g. "stripe/stripe-cli/stripe").
+	// `brew trust` on an already-trusted tap is a no-op.
+	for _, tap := range tapsIn(Packages) {
+		if err := runCmd(ctx, out, brewenv.BrewPath(), "trust", tap); err != nil {
+			return err
+		}
+	}
 	args := []string{"install"}
 	for _, p := range Packages {
 		if !installed(p) {
